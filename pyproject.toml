@@ -1,0 +1,17 @@
+[project]
+name = "api-rest-estudiantes"
+version = "0.1.0"
+description = "API REST para gestión de estudiantes con FastAPI y SQLite"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "jinja2",
+    "pydantic"
+]
+
+[tool.uvicorn]
+app = "main:app"
+reload = true
