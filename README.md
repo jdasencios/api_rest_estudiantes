@@ -19,13 +19,21 @@ instalación:
 # Endpoints principales
 
 Método	Ruta	Descripción
+
 POST	/students	Crear un estudiante
+
 GET	/students	Obtener todos los estudiantes
+
 GET	/students/{id}	Obtener estudiante por ID
+
 PUT	/students/{id}	Actualizar estudiante
+
 DELETE	/students/{id}	Eliminar estudiante
+
 POST	/students/bulk	Crear estudiantes de forma masiva
+
 GET	/students/average	Obtener promedio de notas
+
 GET	/students/table	Renderizar tabla HTML parcial
 
 # Modelo de estudiante
