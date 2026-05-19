@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>API REST de Estudiantes</title>
-
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
 
     <h1>API REST de Estudiantes</h1>
 
-    <p>Esta es una página mínima para probar el fragmento HTMX.</p>
+    <p>Proyecto API REST básica con FastAPI y SQLite.</p>
 
     <button 
         hx-get="/students/table"
@@ -19,9 +18,7 @@
         Cargar tabla de estudiantes
     </button>
 
-    <div id="students-table-container">
-        <!-- Aquí se renderizará la tabla parcial -->
-    </div>
+    <div id="students-table-container"></div>
 
 </body>
 </html>
