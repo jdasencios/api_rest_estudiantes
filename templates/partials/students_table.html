@@ -1,0 +1,29 @@
+<table border="1" cellpadding="8">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>DNI</th>
+            <th>Nombre</th>
+            <th>Edad</th>
+            <th>Nota</th>
+            <th>Aprobado</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for student in students %}
+        <tr>
+            <td>{{ student.id }}</td>
+            <td>{{ student.dni }}</td>
+            <td>{{ student.name }}</td>
+            <td>{{ student.age }}</td>
+            <td>{{ student.grade }}</td>
+            <td>{{ student.is_approved }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6">No hay estudiantes registrados.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

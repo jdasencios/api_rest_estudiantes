@@ -98,3 +98,10 @@ http://127.0.0.1:8000
 # La base de datos SQLite se crea automáticamente al ejecutar el proyecto por primera vez.
 
 students.db
+
+
+# Archivo templates/index.html
+Este archivo es una página mínima para probar HTMX
+
+# Archivo templates/partials/students_table.html
+Este archivo es obligatorio porque el endpoint /students/table debe devolver un fragmento HTML, no JSON.

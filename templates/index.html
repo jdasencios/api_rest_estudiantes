@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>API REST de Estudiantes</title>
+
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+
+    <h1>API REST de Estudiantes</h1>
+
+    <p>Esta es una página mínima para probar el fragmento HTMX.</p>
+
+    <button 
+        hx-get="/students/table"
+        hx-target="#students-table-container"
+        hx-swap="innerHTML">
+        Cargar tabla de estudiantes
+    </button>
+
+    <div id="students-table-container">
+        <!-- Aquí se renderizará la tabla parcial -->
+    </div>
+
+</body>
+</html>
