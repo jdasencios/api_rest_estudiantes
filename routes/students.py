@@ -1,9 +1,8 @@
 from datetime import datetime
-from pathlib import Path
+from html import escape
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,11 +11,7 @@ from database.database import get_db
 from models.student import Student, StudentCreate, StudentUpdate, StudentResponse
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-TEMPLATES_DIR = BASE_DIR / "templates"
-
 router = APIRouter()
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.post(
@@ -33,14 +28,16 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
             detail="Ya existe un estudiante con ese DNI."
         )
 
+    now = datetime.now()
+
     new_student = Student(
         dni=student.dni,
         name=student.name,
         age=student.age,
         grade=student.grade,
         is_approved=student.is_approved,
-        created_at=datetime.now(),
-        updated_at=datetime.now()
+        created_at=now,
+        updated_at=now
     )
 
     db.add(new_student)
@@ -78,16 +75,49 @@ def get_students_average(db: Session = Depends(get_db)):
     "/students/table",
     response_class=HTMLResponse
 )
-def get_students_table(request: Request, db: Session = Depends(get_db)):
+def get_students_table(db: Session = Depends(get_db)):
     students = db.query(Student).all()
 
-    return templates.TemplateResponse(
-        "partials/students_table.html",
-        {
-            "request": request,
-            "students": students
-        }
-    )
+    rows = ""
+
+    if not students:
+        rows = """
+        <tr>
+            <td colspan="6">No hay estudiantes registrados.</td>
+        </tr>
+        """
+    else:
+        for student in students:
+            rows += f"""
+            <tr>
+                <td>{student.id}</td>
+                <td>{escape(student.dni)}</td>
+                <td>{escape(student.name)}</td>
+                <td>{student.age}</td>
+                <td>{student.grade}</td>
+                <td>{student.is_approved}</td>
+            </tr>
+            """
+
+    html = f"""
+    <table border="1" cellpadding="8">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>DNI</th>
+                <th>Nombre</th>
+                <th>Edad</th>
+                <th>Nota</th>
+                <th>Aprobado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {rows}
+        </tbody>
+    </table>
+    """
+
+    return HTMLResponse(content=html, status_code=200)
 
 
 @router.get(
@@ -194,6 +224,7 @@ def create_students_bulk(
             )
 
         now = datetime.now()
+
         new_student = Student(
             dni=student.dni,
             name=student.name,
