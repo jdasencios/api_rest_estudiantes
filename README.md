@@ -53,7 +53,7 @@ GET	/students/table	Renderizar tabla HTML parcial
 
 curl -X POST http://127.0.0.1:8000/students \
   -H "Content-Type: application/json" \
-  -d '{"dni":"12345678","name":"Juan Pérez","age":20,"grade":15.5,"is_approved":true}'
+  -d '{"dni":"12345678","name":"Juan Flores","age":25,"grade":15.5,"is_approved":true}'
 
 # Obtener todos los estudiantes
 

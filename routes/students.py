@@ -1,19 +1,22 @@
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from database.database import get_db
 from models.student import Student, StudentCreate, StudentUpdate, StudentResponse
 
 
-router = APIRouter()
+BASE_DIR = Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = BASE_DIR / "templates"
 
-templates = Jinja2Templates(directory="templates")
+router = APIRouter()
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 @router.post(
@@ -35,7 +38,9 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
         name=student.name,
         age=student.age,
         grade=student.grade,
-        is_approved=student.is_approved
+        is_approved=student.is_approved,
+        created_at=datetime.now(),
+        updated_at=datetime.now()
     )
 
     db.add(new_student)
@@ -54,9 +59,7 @@ def get_students(db: Session = Depends(get_db)):
     return students
 
 
-@router.get(
-    "/students/average"
-)
+@router.get("/students/average")
 def get_students_average(db: Session = Depends(get_db)):
     average_grade = db.query(func.avg(Student.grade)).scalar()
 
@@ -144,9 +147,7 @@ def update_student(
     return student
 
 
-@router.delete(
-    "/students/{student_id}"
-)
+@router.delete("/students/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.id == student_id).first()
 
@@ -173,8 +174,17 @@ def create_students_bulk(
     db: Session = Depends(get_db)
 ):
     created_students = []
+    dni_enviados = set()
 
     for student in students:
+        if student.dni in dni_enviados:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El DNI {student.dni} está duplicado en la carga masiva."
+            )
+
+        dni_enviados.add(student.dni)
+
         existing_student = db.query(Student).filter(Student.dni == student.dni).first()
 
         if existing_student:
@@ -183,12 +193,15 @@ def create_students_bulk(
                 detail=f"Ya existe un estudiante con el DNI {student.dni}."
             )
 
+        now = datetime.now()
         new_student = Student(
             dni=student.dni,
             name=student.name,
             age=student.age,
             grade=student.grade,
-            is_approved=student.is_approved
+            is_approved=student.is_approved,
+            created_at=now,
+            updated_at=now
         )
 
         db.add(new_student)
