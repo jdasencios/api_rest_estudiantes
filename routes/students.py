@@ -1,10 +1,10 @@
 from datetime import datetime
-from html import escape
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.database import get_db
@@ -13,6 +13,21 @@ from models.student import Student, StudentCreate, StudentUpdate, StudentRespons
 
 router = APIRouter()
 
+
+# ============================================================
+# CONFIGURACIÓN DE TEMPLATES
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = BASE_DIR / "templates"
+
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+# ============================================================
+# CREAR ESTUDIANTE
+# POST /students
+# ============================================================
 
 @router.post(
     "/students",
@@ -28,16 +43,12 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
             detail="Ya existe un estudiante con ese DNI."
         )
 
-    now = datetime.now()
-
     new_student = Student(
         dni=student.dni,
         name=student.name,
         age=student.age,
         grade=student.grade,
-        is_approved=student.is_approved,
-        created_at=now,
-        updated_at=now
+        is_approved=student.is_approved
     )
 
     db.add(new_student)
@@ -47,6 +58,11 @@ def create_student(student: StudentCreate, db: Session = Depends(get_db)):
     return new_student
 
 
+# ============================================================
+# OBTENER TODOS LOS ESTUDIANTES
+# GET /students
+# ============================================================
+
 @router.get(
     "/students",
     response_model=list[StudentResponse]
@@ -55,6 +71,12 @@ def get_students(db: Session = Depends(get_db)):
     students = db.query(Student).all()
     return students
 
+
+# ============================================================
+# PROMEDIO DE NOTAS
+# GET /students/average
+# Esta ruta debe ir antes de /students/{student_id}
+# ============================================================
 
 @router.get("/students/average")
 def get_students_average(db: Session = Depends(get_db)):
@@ -71,54 +93,32 @@ def get_students_average(db: Session = Depends(get_db)):
     }
 
 
+# ============================================================
+# TABLA HTML PARCIAL PARA HTMX
+# GET /students/table
+# Esta ruta debe ir antes de /students/{student_id}
+# ============================================================
+
 @router.get(
     "/students/table",
     response_class=HTMLResponse
 )
-def get_students_table(db: Session = Depends(get_db)):
+def get_students_table(request: Request, db: Session = Depends(get_db)):
     students = db.query(Student).all()
 
-    rows = ""
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/students_table.html",
+        context={
+            "students": students
+        }
+    )
 
-    if not students:
-        rows = """
-        <tr>
-            <td colspan="6">No hay estudiantes registrados.</td>
-        </tr>
-        """
-    else:
-        for student in students:
-            rows += f"""
-            <tr>
-                <td>{student.id}</td>
-                <td>{escape(student.dni)}</td>
-                <td>{escape(student.name)}</td>
-                <td>{student.age}</td>
-                <td>{student.grade}</td>
-                <td>{student.is_approved}</td>
-            </tr>
-            """
 
-    html = f"""
-    <table border="1" cellpadding="8">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>DNI</th>
-                <th>Nombre</th>
-                <th>Edad</th>
-                <th>Nota</th>
-                <th>Aprobado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows}
-        </tbody>
-    </table>
-    """
-
-    return HTMLResponse(content=html, status_code=200)
-
+# ============================================================
+# OBTENER ESTUDIANTE POR ID
+# GET /students/{student_id}
+# ============================================================
 
 @router.get(
     "/students/{student_id}",
@@ -135,6 +135,11 @@ def get_student_by_id(student_id: int, db: Session = Depends(get_db)):
 
     return student
 
+
+# ============================================================
+# ACTUALIZAR ESTUDIANTE
+# PUT /students/{student_id}
+# ============================================================
 
 @router.put(
     "/students/{student_id}",
@@ -177,6 +182,11 @@ def update_student(
     return student
 
 
+# ============================================================
+# ELIMINAR ESTUDIANTE
+# DELETE /students/{student_id}
+# ============================================================
+
 @router.delete("/students/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -195,6 +205,11 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     }
 
 
+# ============================================================
+# CREACIÓN MASIVA
+# POST /students/bulk
+# ============================================================
+
 @router.post(
     "/students/bulk",
     status_code=status.HTTP_201_CREATED
@@ -204,17 +219,8 @@ def create_students_bulk(
     db: Session = Depends(get_db)
 ):
     created_students = []
-    dni_enviados = set()
 
     for student in students:
-        if student.dni in dni_enviados:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El DNI {student.dni} está duplicado en la carga masiva."
-            )
-
-        dni_enviados.add(student.dni)
-
         existing_student = db.query(Student).filter(Student.dni == student.dni).first()
 
         if existing_student:
@@ -223,29 +229,18 @@ def create_students_bulk(
                 detail=f"Ya existe un estudiante con el DNI {student.dni}."
             )
 
-        now = datetime.now()
-
         new_student = Student(
             dni=student.dni,
             name=student.name,
             age=student.age,
             grade=student.grade,
-            is_approved=student.is_approved,
-            created_at=now,
-            updated_at=now
+            is_approved=student.is_approved
         )
 
         db.add(new_student)
         created_students.append(new_student)
 
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Error al insertar estudiantes. Verifique que los DNI sean únicos."
-        )
+    db.commit()
 
     for student in created_students:
         db.refresh(student)
